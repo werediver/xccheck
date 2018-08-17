@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "SwiftPM",
+        "repositoryURL": "https://github.com/apple/swift-package-manager.git",
+        "state": {
+          "branch": null,
+          "revision": "6983434787dec4e543e9d398a0a9acf63ccd4da1",
+          "version": "0.2.1"
+        }
+      },
+      {
+        "package": "XcodeEditor",
+        "repositoryURL": "https://github.com/appsquickly/XcodeEditor.git",
+        "state": {
+          "branch": "master",
+          "revision": "f3234db7fc40d8e917e169bc937ed03ca76ba885",
+          "version": null
+        }
+      }
+    ]
+  },
+  "version": 1
+}
