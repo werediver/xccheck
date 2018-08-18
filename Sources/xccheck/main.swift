@@ -1,6 +1,8 @@
+import struct Foundation.Data
+import func Foundation.exit
 import Basic
 import Utility
-import XcodeEditor
+import xcodeproj
 
 func listFiles(path: String) throws -> Set<String> {
     let result = try Process.popen(args: "git", "ls-files", "-z", path)
@@ -12,11 +14,10 @@ func listFiles(path: String) throws -> Set<String> {
     return Set(lines)
 }
 
-func listProjectFiles(projectFilePath: String) -> Set<String> {
-    guard let proj = XCProject(filePath: projectFilePath)
-    else { exit(0) }
+func listProjectFiles(projectFilePath: String) throws -> Set<String> {
+    let proj = try XcodeProj(path: AbsolutePath(projectFilePath, relativeTo: currentWorkingDirectory))
 
-    let paths = proj.files().compactMap { file in proj.groupMember(withKey: file.key).pathRelativeToProjectRoot() }
+    let paths = proj.pbxproj.objects.fileReferences.values.compactMap { $0.path }
 
     return Set(paths)
 }
@@ -35,12 +36,15 @@ if  subparser == "list",
     let rootPath = parsedArguments?.get(root)
 {
     let allFiles = try listFiles(path: rootPath)
-    let projectFiles = listProjectFiles(projectFilePath: xcodeprojPath)
+    let projectFiles = try listProjectFiles(projectFilePath: xcodeprojPath)
 
-    print("All files:\n\(allFiles.sorted().joined(separator: "\n"))")
-    print("Project files:\n\(projectFiles.sorted().joined(separator: "\n"))")
-
-    let suspiciousFiles = allFiles.subtracting(projectFiles)
+    //let suspiciousFiles = allFiles.subtracting(projectFiles)
+    var suspiciousFiles = [String]()
+    for file in allFiles {
+        if !projectFiles.contains(where: file.localizedCaseInsensitiveContains) {
+            suspiciousFiles.append(file)
+        }
+    }
 
     for path in suspiciousFiles.sorted() {
         print(path)
