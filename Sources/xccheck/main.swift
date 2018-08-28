@@ -1,36 +1,59 @@
 import struct Basic.AbsolutePath
-import var Basic.currentWorkingDirectory
-import var Basic.stdoutStream
-import class Utility.ArgumentParser
 import class Foundation.NSString
 
-let argumentParser = ArgumentParser(usage: "<command> <arguments>", overview: "Xcode project utility")
-let listArgumentParser = argumentParser.add(subparser: "list", overview: "List files belonging to a project")
-let xcodeproj = listArgumentParser.add(positional: "xcodeproj", kind: String.self, optional: false, usage: "Xcode project file")
+func main(
+    command: Command?,
+    usagePrinter: UsagePrinting,
+    fileListFactory: FileListProducing,
+    projectFileListFactory: FileListProducing
+) throws {
 
-let arguments = Array(CommandLine.arguments.dropFirst())
-let parsedArguments = try? argumentParser.parse(arguments)
-let subparser = parsedArguments?.subparser(argumentParser)
-
-if  subparser == "list",
-    let xcodeprojPath = parsedArguments?
-        .get(xcodeproj)
-        .map({ AbsolutePath($0, relativeTo: currentWorkingDirectory) })
-{
-    let allFiles = try GitFileListFactory().make(path: xcodeprojPath.parentDirectory)
-    let projectFiles = try Set(ProjectFileListFactory().make(path: xcodeprojPath))
-
-    //let suspiciousFiles = allFiles.subtracting(projectFiles)
-    var suspiciousFiles = [String]()
-    for file in allFiles {
-        if !projectFiles.contains(where: file.localizedCaseInsensitiveContains) {
-            suspiciousFiles.append(file)
-        }
+    guard let command = command
+    else {
+        usagePrinter.printUsage()
+        return
     }
 
-    for path in suspiciousFiles.sorted() {
+    let filesOfInterest: [String]
+
+    switch command {
+
+    case let .list(.all, xcodeprojPath):
+
+        filesOfInterest = try Array(fileListFactory.make(path: xcodeprojPath.parentDirectory))
+
+    case let .list(.project, xcodeprojPath):
+
+        filesOfInterest = try Array(Set(projectFileListFactory.make(path: xcodeprojPath)))
+
+    case let .list(.suspicious, xcodeprojPath):
+
+        let allFiles = try fileListFactory.make(path: xcodeprojPath.parentDirectory)
+        let projectFiles = try Set(projectFileListFactory.make(path: xcodeprojPath))
+
+        //filesOfInterest = allFiles.subtracting(projectFiles)
+        
+        var suspiciousFiles = [String]()
+
+        for file in allFiles {
+            if !projectFiles.contains(where: file.localizedCaseInsensitiveContains) {
+                suspiciousFiles.append(file)
+            }
+        }
+
+        filesOfInterest = suspiciousFiles
+    }
+
+    for path in filesOfInterest.sorted() {
         print(path)
     }
-} else {
-    argumentParser.printUsage(on: stdoutStream)
 }
+
+let commandLineArgumentsParser = CommandLineArgumentsParser()
+let command = commandLineArgumentsParser.parse(arguments: CommandLine.arguments.dropFirst())
+try main(
+        command: command,
+        usagePrinter: commandLineArgumentsParser,
+        fileListFactory: GitFileListFactory(),
+        projectFileListFactory: ProjectFileListFactory()
+    )
