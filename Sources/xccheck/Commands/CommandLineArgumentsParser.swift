@@ -12,7 +12,7 @@ final class CommandLineArgumentsParser: UsagePrinting {
 
     init() {
 
-        self.main = ArgumentParser(usage: "<command> <arguments>", overview: "Xcode project utility")
+        self.main = ArgumentParser(usage: "<command> <xcodeproj-file>", overview: "Xcode project utility")
         self.listAll = ListParser.add(kind: .all, to: main)
         self.listProject = ListParser.add(kind: .project, to: main)
         self.listSuspicious = ListParser.add(kind: .suspicious, to: main)
